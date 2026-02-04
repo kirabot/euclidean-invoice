@@ -388,6 +388,35 @@
     return new Intl.NumberFormat(undefined, { style: "currency", currency: ccy || "EUR" }).format(x);
   }
 
+  function parseInvoiceDate(dateString) {
+    if (!dateString) return null;
+    const raw = String(dateString).trim();
+    if (!raw) return null;
+    const parsed = new Date(raw.includes("T") ? raw : `${raw}T00:00:00`);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+
+  function formatDueMessage(invoice) {
+    const startDate = parseInvoiceDate(invoice?.delivery_date || invoice?.issue_date);
+    const dueDate = parseInvoiceDate(invoice?.due_date);
+    if (!startDate || !dueDate) return "";
+    const msPerDay = 24 * 60 * 60 * 1000;
+    const dayDiff = Math.ceil((dueDate - startDate) / msPerDay);
+    return `Payment due in ${dayDiff} days`;
+  }
+
+  function mergeNotesWithDue(notes, dueMessage) {
+    if (!dueMessage) return notes;
+    const baseNotes = String(notes || "").trim();
+    const duePattern = /Payment due in \d+ days\.?/i;
+    if (!baseNotes) return dueMessage;
+    if (duePattern.test(baseNotes)) {
+      return baseNotes.replace(duePattern, dueMessage);
+    }
+    const separator = baseNotes.endsWith(".") ? " " : ". ";
+    return `${baseNotes}${separator}${dueMessage}`;
+  }
+
   function lineTotal(it) {
     const qty = Number(it.qty || 0);
     const unit = Number(it.unit_price || 0);
@@ -504,6 +533,8 @@
     const issue = esc(doc.invoice?.issue_date || "");
     const due = esc(doc.invoice?.due_date || "");
     const invno = esc(doc.invoice?.number || "");
+    const dueMessage = formatDueMessage(doc.invoice || {});
+    const notesText = mergeNotesWithDue(doc.invoice?.notes || "", dueMessage);
 
     const items = (doc.line_items || []).map((it, idx) => {
       const lt = lineTotal(it);
@@ -619,7 +650,7 @@
 
         <div class="box">
           <h3>Notes</h3>
-          <div class="small">${esc(doc.invoice?.notes || "")}</div>
+          <div class="small">${esc(notesText)}</div>
         </div>
       </div>
     `;
@@ -644,6 +675,7 @@
       invoice: {
         number: "EU-2026-0007",
         issue_date: "2026-02-04",
+        delivery_date: "2026-02-05",
         due_date: "2026-02-18",
         currency: "RSD",
         notes: "Payment due within 14 days. Thank you."
