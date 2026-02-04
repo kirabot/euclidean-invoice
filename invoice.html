@@ -5,9 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Euclidean Invoice Generator</title>
 
-  <!-- libs for pdf + qr -->
+  <!-- libs for pdf -->
   <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 
   <style>
     :root {
@@ -515,12 +514,24 @@
     return parts.join("|");
   }
 
-  async function renderQrInto(canvas, text) {
-    // Keep QR readable on small size
-    await QRCode.toCanvas(canvas, text, {
-      errorCorrectionLevel: "M",
-      margin: 1,
-      scale: 4
+  async function fetchIpsQrDataUrl(ipsString) {
+    const response = await fetch("/api/ips-qr", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ data: ipsString })
+    });
+
+    if (!response.ok) {
+      const message = await response.text();
+      throw new Error(message || "QR endpoint error.");
+    }
+
+    const blob = await response.blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(new Error("Failed to read QR image."));
+      reader.readAsDataURL(blob);
     });
   }
 
@@ -648,7 +659,7 @@
             <div>
               ${showIps ? `
                 <div class="qrBox">
-                  <canvas id="ipsQr" width="92" height="92"></canvas>
+                  <img id="ipsQr" alt="IPS QR code" width="92" height="92" />
                 </div>
                 <div class="qrCaption">Scan To Pay</div>
               ` : `
@@ -668,16 +679,19 @@
     `;
 
     if (showIps) {
-      const canvas = document.getElementById("ipsQr");
       try {
-        await renderQrInto(canvas, ipsString);
+        const qrImg = document.getElementById("ipsQr");
+        qrImg.src = await fetchIpsQrDataUrl(ipsString);
       } catch (e) {
         // If QR fails, show error inline (but don't break render)
         const err = document.createElement("div");
         err.className = "small";
         err.style.color = "#b00020";
         err.textContent = "QR generation failed: " + (e?.message || e);
-        canvas.parentElement.replaceWith(err);
+        const qrBox = document.getElementById("ipsQr")?.parentElement;
+        if (qrBox) {
+          qrBox.replaceWith(err);
+        }
       }
     }
   }
