@@ -79,9 +79,9 @@
 </div>
 
 <div class="footer">
-  <div class="box">
-    <h3>Payment</h3>
-    <div class="payGrid">
+  <div class="footerRow">
+    <div class="box">
+      <h3>Payment</h3>
       <div>
         <div class="small" data-optional="seller.bank.beneficiary"><span class="muted">Beneficiary:</span> <span data-field="seller.bank.beneficiary"></span></div>
         <div class="small" data-optional="seller.bank.bank_name"><span class="muted">Bank:</span> <span data-field="seller.bank.bank_name"></span></div>
@@ -90,22 +90,23 @@
         <div class="small" data-optional="computed.account_no"><span class="muted">Account:</span> <span data-field="computed.account_no"></span></div>
         <div class="small" data-optional="seller.bank.bank_address"><span class="muted">Bank Address:</span> <span data-field="seller.bank.bank_address"></span></div>
         <div class="small"><span class="muted">Currency:</span> <span data-field="invoice.currency"></span></div>
-        <div data-show="ips" style="margin-top:8px;"><span class="pill">NBS IPS QR (RSD)</span></div>
-        <div data-show="ips" class="small" style="margin-top:6px;"><span class="muted">IPS String:</span> <span style="word-break:break-all;" data-field="computed.ips_string"></span></div>
         <div data-hide="ips" class="small muted" style="margin-top:8px;">IPS QR is generated only for RSD invoices.</div>
       </div>
+    </div>
 
-      <div>
-        <div data-show="ips">
-          <div class="qrBox">
-            <canvas id="ipsQr" width="92" height="92"></canvas>
-          </div>
-          <div class="qrCaption">Scan To Pay</div>
+    <div class="box" aria-label="Payment QR">
+      <h3>QR</h3>
+      <div data-show="ips">
+        <div class="qrBox">
+          <canvas id="ipsQr" width="140" height="140"></canvas>
         </div>
-        <div data-hide="ips">
-          <div class="qrBox" style="color:var(--muted);font-size:11px;text-align:center;padding:8px;box-sizing:border-box;">
-            No QR<br />For <span data-field="invoice.currency"></span>
-          </div>
+        <div class="qrCaption">Scan To Pay</div>
+        <div class="ipsString"><span class="pill">NBS IPS QR (RSD)</span></div>
+        <div class="ipsString" data-field="computed.ips_string"></div>
+      </div>
+      <div data-hide="ips">
+        <div class="qrBox" style="color:var(--muted);font-size:11px;text-align:center;padding:12px;box-sizing:border-box;">
+          No QR<br />For <span data-field="invoice.currency"></span>
         </div>
       </div>
     </div>
