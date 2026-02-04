@@ -100,6 +100,17 @@
       margin-top: 10px;
     }
 
+    .warning {
+      color: #8b1e1e;
+      background: rgba(139, 30, 30, 0.08);
+      border: 1px solid rgba(139, 30, 30, 0.22);
+      padding: 8px 10px;
+      border-radius: 10px;
+      font-size: 12px;
+      margin-top: 10px;
+      white-space: pre-wrap;
+    }
+
     /* Invoice sheet */
     .sheetWrap { padding: 12px; overflow: auto; }
     .sheet {
@@ -316,6 +327,7 @@
         <div class="hint">
           Notes: Seller + logo are hardcoded. PDF uses in-page rendering (no print dialog). IPS QR is generated for RSD only.
         </div>
+        <div class="warning" id="protocolWarning" hidden></div>
         <div class="error" id="err"></div>
       </div>
     </div>
@@ -682,6 +694,17 @@
     }
   }
 
+  function updateProtocolWarning() {
+    const warning = $("protocolWarning");
+    if (location.protocol === "file:") {
+      warning.hidden = false;
+      warning.textContent = "PDF export requires an HTTP server. You're currently using file://.\nRun something like `python -m http.server` and open http://localhost:8000/invoice.html.";
+    } else {
+      warning.hidden = true;
+      warning.textContent = "";
+    }
+  }
+
   $("renderBtn").addEventListener("click", async () => {
     const obj = safeParseJson();
     if (!obj) return;
@@ -695,6 +718,12 @@
     if (!obj) return;
 
     await render(obj);
+
+    if (typeof html2pdf !== "function") {
+      $("err").textContent = "PDF export requires html2pdf, but it isn't available. This can happen when the CDN is blocked or the script isn't bundled locally.\n\nFallback: use your browser's Print dialog (Save as PDF).";
+      window.print();
+      return;
+    }
 
     // Ensure images/fonts have a moment to settle (especially logo)
     await new Promise(r => setTimeout(r, 120));
@@ -713,11 +742,13 @@
     try {
       await html2pdf().set(opt).from(element).save();
     } catch (e) {
-      $("err").textContent = "PDF export failed. If you're opening this in a restricted environment (some Electron wrappers do this), try a normal Chrome/Edge window.\n\nError: " + String(e?.message || e);
+      $("err").textContent = "PDF export failed. If you're opening this via file://, use an HTTP server. If a CDN is blocked, bundle html2pdf locally.\n\nFallback: use your browser's Print dialog (Save as PDF).\n\nError: " + String(e?.message || e);
+      window.print();
     }
   });
 
   // Boot
+  updateProtocolWarning();
   loadSample();
 </script>
 </body>
