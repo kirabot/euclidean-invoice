@@ -80,22 +80,29 @@
 
 <div class="footer">
   <div class="footerRow">
-    <div class="box">
-      <h3>Payment</h3>
-      <div>
-        <div class="small" data-optional="seller.bank.beneficiary"><span class="muted">Beneficiary:</span> <span data-field="seller.bank.beneficiary"></span></div>
-        <div class="small" data-optional="seller.bank.bank_name"><span class="muted">Bank:</span> <span data-field="seller.bank.bank_name"></span></div>
-        <div class="small" data-optional="seller.bank.iban"><span class="muted">IBAN:</span> <span data-field="seller.bank.iban"></span></div>
-        <div class="small" data-optional="seller.bank.swift"><span class="muted">SWIFT/BIC:</span> <span data-field="seller.bank.swift"></span></div>
-        <div class="small" data-optional="computed.account_no"><span class="muted">Account:</span> <span data-field="computed.account_no"></span></div>
-        <div class="small" data-optional="seller.bank.bank_address"><span class="muted">Bank Address:</span> <span data-field="seller.bank.bank_address"></span></div>
-        <div class="small"><span class="muted">Currency:</span> <span data-field="invoice.currency"></span></div>
-        <div data-hide="ips" class="small muted" style="margin-top:8px;">IPS QR is generated only for RSD invoices.</div>
+    <div class="footerLeft">
+      <div class="box">
+        <h3>Payment</h3>
+        <div>
+          <div class="small" data-optional="seller.bank.beneficiary"><span class="muted">Beneficiary:</span> <span data-field="seller.bank.beneficiary"></span></div>
+          <div class="small" data-optional="seller.bank.bank_name"><span class="muted">Bank:</span> <span data-field="seller.bank.bank_name"></span></div>
+          <div class="small" data-optional="seller.bank.iban"><span class="muted">IBAN:</span> <span data-field="seller.bank.iban"></span></div>
+          <div class="small" data-optional="seller.bank.swift"><span class="muted">SWIFT/BIC:</span> <span data-field="seller.bank.swift"></span></div>
+          <div class="small" data-optional="computed.account_no"><span class="muted">Account:</span> <span data-field="computed.account_no"></span></div>
+          <div class="small" data-optional="seller.bank.bank_address"><span class="muted">Bank Address:</span> <span data-field="seller.bank.bank_address"></span></div>
+          <div class="small"><span class="muted">Currency:</span> <span data-field="invoice.currency"></span></div>
+          <div data-hide="ips" class="small muted" style="margin-top:8px;">IPS QR is generated only for RSD invoices.</div>
+        </div>
+      </div>
+
+      <div class="box">
+        <h3>Notes</h3>
+        <div class="small" data-field="invoice.notes"></div>
       </div>
     </div>
 
     <div class="box" aria-label="Payment QR">
-      <h3>QR</h3>
+      <h3>For your convenience</h3>
       <div data-show="ips">
         <div class="qrBox">
           <canvas id="ipsQr" width="140" height="140"></canvas>
@@ -110,10 +117,5 @@
         </div>
       </div>
     </div>
-  </div>
-
-  <div class="box">
-    <h3>Notes</h3>
-    <div class="small" data-field="invoice.notes"></div>
   </div>
 </div>

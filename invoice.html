@@ -253,6 +253,12 @@
       display: grid;
       grid-template-columns: 1fr 160px;
       gap: 16px;
+      align-items: start;
+    }
+
+    .footerLeft {
+      display: grid;
+      gap: 16px;
     }
 
     .small { font-size: 12px; line-height: 1.4; }
@@ -297,7 +303,13 @@
     @media print {
       body { background: #fff; }
       .app { display: block; padding: 0; }
-      .panel { display: none; }
+      .panel.editor { display: none; }
+      .panel.preview {
+        display: block;
+        border: none;
+        border-radius: 0;
+      }
+      .panel.preview h2 { display: none; }
       .sheetWrap { padding: 0; }
       .sheet {
         border: none;
@@ -317,7 +329,7 @@
 </head>
 <body>
   <div class="app">
-    <div class="panel">
+    <div class="panel editor">
       <h2>Invoice JSON</h2>
       <div class="content">
         <textarea id="json"></textarea>
@@ -334,7 +346,7 @@
       </div>
     </div>
 
-    <div class="panel">
+    <div class="panel preview">
       <h2>Preview</h2>
       <div class="sheetWrap">
         <div class="sheet" id="sheet"></div>
@@ -411,12 +423,12 @@
   }
 
   function formatDueMessage(invoice) {
-    const startDate = parseInvoiceDate(invoice?.delivery_date || invoice?.issue_date);
+    const startDate = parseInvoiceDate(invoice?.issue_date);
     const dueDate = parseInvoiceDate(invoice?.due_date);
     if (!startDate || !dueDate) return "";
     const msPerDay = 24 * 60 * 60 * 1000;
     const dayDiff = Math.ceil((dueDate - startDate) / msPerDay);
-    return `Payment due in ${dayDiff} days`;
+    return `Payment due in ${dayDiff} days.`;
   }
 
   function mergeNotesWithDue(notes, dueMessage) {
@@ -655,22 +667,29 @@
 
       <div class="footer">
         <div class="footerRow">
-          <div class="box">
-            <h3>Payment</h3>
-            <div>
-              ${bank.beneficiary ? `<div class="small"><span class="muted">Beneficiary:</span> ${esc(bank.beneficiary)}</div>` : ``}
-              ${bank.bank_name ? `<div class="small"><span class="muted">Bank:</span> ${esc(bank.bank_name)}</div>` : ``}
-              ${bank.iban ? `<div class="small"><span class="muted">IBAN:</span> ${esc(bank.iban)}</div>` : ``}
-              ${bank.swift ? `<div class="small"><span class="muted">SWIFT/BIC:</span> ${esc(bank.swift)}</div>` : ``}
-              ${accountNo ? `<div class="small"><span class="muted">Account:</span> ${esc(accountNo)}</div>` : ``}
-              ${bank.bank_address ? `<div class="small"><span class="muted">Bank Address:</span> ${esc(bank.bank_address)}</div>` : ``}
-              <div class="small"><span class="muted">Currency:</span> ${esc(ccy)}</div>
-              ${!showIps ? `<div class="small muted" style="margin-top:8px;">IPS QR is generated only for RSD invoices.</div>` : ``}
+          <div class="footerLeft">
+            <div class="box">
+              <h3>Payment</h3>
+              <div>
+                ${bank.beneficiary ? `<div class="small"><span class="muted">Beneficiary:</span> ${esc(bank.beneficiary)}</div>` : ``}
+                ${bank.bank_name ? `<div class="small"><span class="muted">Bank:</span> ${esc(bank.bank_name)}</div>` : ``}
+                ${bank.iban ? `<div class="small"><span class="muted">IBAN:</span> ${esc(bank.iban)}</div>` : ``}
+                ${bank.swift ? `<div class="small"><span class="muted">SWIFT/BIC:</span> ${esc(bank.swift)}</div>` : ``}
+                ${accountNo ? `<div class="small"><span class="muted">Account:</span> ${esc(accountNo)}</div>` : ``}
+                ${bank.bank_address ? `<div class="small"><span class="muted">Bank Address:</span> ${esc(bank.bank_address)}</div>` : ``}
+                <div class="small"><span class="muted">Currency:</span> ${esc(ccy)}</div>
+                ${!showIps ? `<div class="small muted" style="margin-top:8px;">IPS QR is generated only for RSD invoices.</div>` : ``}
+              </div>
+            </div>
+
+            <div class="box">
+              <h3>Notes</h3>
+              <div class="small">${esc(notesText)}</div>
             </div>
           </div>
 
           <div class="box" aria-label="Payment QR">
-            <h3>QR</h3>
+            <h3>For your convenience</h3>
             ${showIps ? `
               <div class="qrBox">
                 <img id="ipsQr" alt="IPS QR code" width="140" height="140" />
@@ -684,11 +703,6 @@
               </div>
             `}
           </div>
-        </div>
-
-        <div class="box">
-          <h3>Notes</h3>
-          <div class="small">${esc(notesText)}</div>
         </div>
       </div>
     `;
@@ -716,7 +730,6 @@
       invoice: {
         number: defaultInvoiceNumber(),
         issue_date: "2026-02-04",
-        delivery_date: "2026-02-05",
         due_date: "2026-02-18",
         currency: "RSD",
         notes: "Thank you for your business."
