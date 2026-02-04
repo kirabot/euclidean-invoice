@@ -97,8 +97,7 @@ const INVOICE_SCHEMA = {
       additionalProperties: false,
       properties: {
         sf: { type: "string" },
-        s: { type: "string" },
-        ro: { type: "string" }
+        s: { type: "string" }
       }
     },
     branding: {
@@ -239,12 +238,12 @@ function buildIpsString(doc, totals) {
   const payeeName = doc.seller?.company_name || "";
   const amount = totals.grand;
 
-  const sf = String(doc.ips?.sf ?? "289").trim();
-  const purpose = String(doc.ips?.s ?? `Invoice ${doc.invoice?.number || ""}`).trim().slice(0, 35);
+  const sf = String(doc.ips?.sf ?? "221").trim();
+  const purpose = String(doc.ips?.s ?? "Usluge 3D dizajna i proizvodnje").trim().slice(0, 35);
 
   const inv = String(doc.invoice?.number || "").replaceAll(" ", "");
   const roDefault = ("00" + inv).slice(0, 25);
-  const ro = String(doc.ips?.ro ?? roDefault).trim().slice(0, 25);
+  const ro = roDefault;
 
   const parts = [
     "K:PR",
@@ -445,9 +444,8 @@ function loadSample() {
     ],
     totals: { discount: 0, shipping: 0, tax_included: false },
     ips: {
-      sf: "289",
-      s: `Invoice ${defaultInvoiceNumber()}`,
-      ro: `00${defaultInvoiceNumber()}`
+      sf: "221",
+      s: "Usluge 3D dizajna i proizvodnje"
     }
   };
 

@@ -509,17 +509,17 @@
     const payeeName = doc.seller?.company_name || "";
     const amount = totals.grand;
 
-    // Default SF: 289 (cashless) is common; adjust per your context. :contentReference[oaicite:5]{index=5}
-    const sf = String(doc.ips?.sf ?? "289").trim();
+    // Default SF: 221 (final expenditure for goods/services) for business payments. :contentReference[oaicite:5]{index=5}
+    const sf = String(doc.ips?.sf ?? "221").trim();
 
     // S: up to 35 chars recommended. :contentReference[oaicite:6]{index=6}
-    const purpose = String(doc.ips?.s ?? `Invoice ${doc.invoice?.number || ""}`).trim().slice(0, 35);
+    const purpose = String(doc.ips?.s ?? "Usluge 3D dizajna i proizvodnje").trim().slice(0, 35);
 
     // RO: model + reference number (optional). Spec talks about leading 00 if no model. :contentReference[oaicite:7]{index=7}
     // We'll default to 00 + invoice number digits, lightly cleaned.
     const inv = String(doc.invoice?.number || "").replaceAll(" ", "");
     const roDefault = ("00" + inv).slice(0, 25);
-    const ro = String(doc.ips?.ro ?? roDefault).trim().slice(0, 25);
+    const ro = roDefault;
 
     const parts = [
       "K:PR",
@@ -748,9 +748,8 @@
 
       // Optional IPS overrides (defaults shown):
       ips: {
-        sf: "289",
-        s: `Invoice ${defaultInvoiceNumber()}`,
-        ro: `00${defaultInvoiceNumber()}`
+        sf: "221",
+        s: "Usluge 3D dizajna i proizvodnje"
       }
     };
 
