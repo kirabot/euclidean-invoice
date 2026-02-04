@@ -5,9 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Euclidean Invoice Generator</title>
 
-  <!-- libs for pdf -->
-  <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
-
   <style>
     :root {
       --accent: #a22a2a; /* Deep Euclidean-ish red */
@@ -226,7 +223,7 @@
       border: 1px solid var(--border);
       border-radius: 12px;
       padding: 12px;
-      background: linear-gradient(to bottom, #fff, rgba(139,30,30,0.04));
+      background: #f5f5f5;
     }
 
     .totalsRow {
@@ -249,22 +246,20 @@
     .footer {
       margin-top: 18px;
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .footerRow {
+      display: grid;
+      grid-template-columns: 1fr 160px;
       gap: 16px;
     }
 
     .small { font-size: 12px; line-height: 1.4; }
 
-    .payGrid {
-      display: grid;
-      grid-template-columns: 1fr 92px;
-      gap: 12px;
-      align-items: start;
-    }
-
     .qrBox {
-      width: 92px;
-      height: 92px;
+      width: 140px;
+      height: 140px;
       border: 1px solid var(--border);
       border-radius: 12px;
       overflow: hidden;
@@ -274,9 +269,17 @@
     }
 
     .qrCaption {
-      margin-top: 6px;
+      margin-top: 8px;
       font-size: 10px;
       color: var(--muted);
+      text-align: center;
+    }
+
+    .ipsString {
+      margin-top: 8px;
+      font-size: 10px;
+      color: var(--muted);
+      word-break: break-all;
       text-align: center;
     }
 
@@ -324,7 +327,7 @@
           <button id="sampleBtn">Load Sample</button>
         </div>
         <div class="hint">
-          Notes: Seller + logo are hardcoded. PDF uses in-page rendering (no print dialog). IPS QR is generated for RSD only.
+          Notes: Seller + logo are hardcoded. PDF uses the browser print dialog for selectable text. IPS QR is generated for RSD only.
         </div>
         <div class="warning" id="protocolWarning" hidden></div>
         <div class="error" id="err"></div>
@@ -370,7 +373,7 @@
       logo_path: "NazSkull.webp"
     },
     invoice: {
-      notes: "This invoice is digitally generated and valid without a stamp. The issuer is not a VAT/PDV payer under Serbian law."
+      notes: "Thank you for your business."
     }
   };
 
@@ -435,6 +438,14 @@
     const taxRate = Number(it.tax_rate || 0);
     const tax = base * taxRate;
     return { base, tax, gross: base + tax };
+  }
+
+  function defaultInvoiceNumber() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const seq = "0001";
+    return `EU-${year}-${month}-${seq}`;
   }
 
   function computeTotals(doc) {
@@ -537,6 +548,9 @@
 
   async function render(docRaw) {
     const doc = deepMerge(DEFAULTS, docRaw);
+    if (!doc.invoice?.number) {
+      doc.invoice = { ...doc.invoice, number: defaultInvoiceNumber() };
+    }
 
     // Apply branding
     document.documentElement.style.setProperty("--accent", doc.branding?.accent || "#8b1e1e");
@@ -555,7 +569,7 @@
 
     const issue = esc(doc.invoice?.issue_date || "");
     const due = esc(doc.invoice?.due_date || "");
-    const invno = esc(doc.invoice?.number || "");
+    const invno = esc(doc.invoice?.number || defaultInvoiceNumber());
     const dueMessage = formatDueMessage(doc.invoice || {});
     const notesText = mergeNotesWithDue(doc.invoice?.notes || "", dueMessage);
 
@@ -640,9 +654,9 @@
       </div>
 
       <div class="footer">
-        <div class="box">
-          <h3>Payment</h3>
-          <div class="payGrid">
+        <div class="footerRow">
+          <div class="box">
+            <h3>Payment</h3>
             <div>
               ${bank.beneficiary ? `<div class="small"><span class="muted">Beneficiary:</span> ${esc(bank.beneficiary)}</div>` : ``}
               ${bank.bank_name ? `<div class="small"><span class="muted">Bank:</span> ${esc(bank.bank_name)}</div>` : ``}
@@ -651,23 +665,24 @@
               ${accountNo ? `<div class="small"><span class="muted">Account:</span> ${esc(accountNo)}</div>` : ``}
               ${bank.bank_address ? `<div class="small"><span class="muted">Bank Address:</span> ${esc(bank.bank_address)}</div>` : ``}
               <div class="small"><span class="muted">Currency:</span> ${esc(ccy)}</div>
-              ${showIps ? `<div style="margin-top:8px;"><span class="pill">NBS IPS QR (RSD)</span></div>` : ``}
-              ${showIps ? `<div class="small" style="margin-top:6px;"><span class="muted">IPS String:</span> <span style="word-break:break-all;">${esc(ipsString)}</span></div>` : ``}
               ${!showIps ? `<div class="small muted" style="margin-top:8px;">IPS QR is generated only for RSD invoices.</div>` : ``}
             </div>
+          </div>
 
-            <div>
-              ${showIps ? `
-                <div class="qrBox">
-                  <img id="ipsQr" alt="IPS QR code" width="92" height="92" />
-                </div>
-                <div class="qrCaption">Scan To Pay</div>
-              ` : `
-                <div class="qrBox" style="color:var(--muted);font-size:11px;text-align:center;padding:8px;box-sizing:border-box;">
-                  No QR<br/>For ${esc(ccy)}
-                </div>
-              `}
-            </div>
+          <div class="box" aria-label="Payment QR">
+            <h3>QR</h3>
+            ${showIps ? `
+              <div class="qrBox">
+                <img id="ipsQr" alt="IPS QR code" width="140" height="140" />
+              </div>
+              <div class="qrCaption">Scan To Pay</div>
+              <div class="ipsString"><span class="pill">NBS IPS QR (RSD)</span></div>
+              <div class="ipsString">${esc(ipsString)}</div>
+            ` : `
+              <div class="qrBox" style="color:var(--muted);font-size:11px;text-align:center;padding:12px;box-sizing:border-box;">
+                No QR<br/>For ${esc(ccy)}
+              </div>
+            `}
           </div>
         </div>
 
@@ -699,12 +714,12 @@
   function loadSample() {
     const sample = {
       invoice: {
-        number: "EU-2026-0007",
+        number: defaultInvoiceNumber(),
         issue_date: "2026-02-04",
         delivery_date: "2026-02-05",
         due_date: "2026-02-18",
         currency: "RSD",
-        notes: "Payment due within 14 days. Thank you."
+        notes: "Thank you for your business."
       },
       buyer: {
         company_name: "Client Company Ltd",
@@ -721,8 +736,8 @@
       // Optional IPS overrides (defaults shown):
       ips: {
         sf: "289",
-        s: "Invoice EU-2026-0007",
-        ro: "00EU-2026-0007"
+        s: `Invoice ${defaultInvoiceNumber()}`,
+        ro: `00${defaultInvoiceNumber()}`
       }
     };
 
@@ -765,32 +780,8 @@
 
     await render(obj);
 
-    if (typeof html2pdf !== "function") {
-      $("err").textContent = "PDF export requires html2pdf, but it isn't available. This can happen when the CDN is blocked or the script isn't bundled locally.\n\nFallback: use your browser's Print dialog (Save as PDF).";
-      window.print();
-      return;
-    }
-
-    // Ensure images/fonts have a moment to settle (especially logo)
     await new Promise(r => setTimeout(r, 120));
-
-    const element = document.getElementById("sheet");
-    const invNo = (obj?.invoice?.number || "invoice").replaceAll(/[^\w\-]+/g, "_");
-
-    const opt = {
-      margin:       [0, 0, 0, 0],
-      filename:     `${invNo}.pdf`,
-      image:        { type: "jpeg", quality: 0.98 },
-      html2canvas:  { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
-      jsPDF:        { unit: "mm", format: "a4", orientation: "portrait" }
-    };
-
-    try {
-      await html2pdf().set(opt).from(element).save();
-    } catch (e) {
-      $("err").textContent = "PDF export failed. If you're opening this via file://, use an HTTP server. If a CDN is blocked, bundle html2pdf locally.\n\nFallback: use your browser's Print dialog (Save as PDF).\n\nError: " + String(e?.message || e);
-      window.print();
-    }
+    window.print();
   });
 
   // Boot

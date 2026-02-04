@@ -30,7 +30,7 @@ const DEFAULTS = {
     logo_path: "NazSkull.webp"
   },
   invoice: {
-    notes: "This invoice is digitally generated and valid without a stamp. The issuer is not a VAT/PDV payer under Serbian law."
+    notes: "Thank you for your business."
   }
 };
 
@@ -189,6 +189,14 @@ function lineTotal(it) {
   return { base, tax, gross: base + tax };
 }
 
+function defaultInvoiceNumber() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const seq = "0001";
+  return `EU-${year}-${month}-${seq}`;
+}
+
 function computeTotals(doc) {
   const items = doc.line_items || [];
   let sub = 0;
@@ -258,7 +266,7 @@ async function renderQrInto(canvas, text) {
   await QRCode.toCanvas(canvas, text, {
     errorCorrectionLevel: "M",
     margin: 1,
-    scale: 4
+    scale: 6
   });
 }
 
@@ -355,6 +363,9 @@ async function render(docRaw) {
   document.documentElement.style.setProperty("--accent", doc.branding?.accent || "#8b1e1e");
 
   const ccy = (doc.invoice?.currency || "EUR").toUpperCase();
+  if (!doc.invoice?.number) {
+    doc.invoice = { ...doc.invoice, number: defaultInvoiceNumber() };
+  }
   const totals = computeTotals(doc);
   const accountNo = pickAccountNo(doc);
   const showIps = ccy === "RSD";
@@ -416,11 +427,11 @@ async function render(docRaw) {
 function loadSample() {
   const sample = {
     invoice: {
-      number: "EU-2026-0007",
+      number: defaultInvoiceNumber(),
       issue_date: "2026-02-04",
       due_date: "2026-02-18",
       currency: "RSD",
-      notes: "Payment due within 14 days. Thank you."
+      notes: "Thank you for your business."
     },
     buyer: {
       company_name: "Client Company Ltd",
@@ -435,8 +446,8 @@ function loadSample() {
     totals: { discount: 0, shipping: 0, tax_included: false },
     ips: {
       sf: "289",
-      s: "Invoice EU-2026-0007",
-      ro: "00EU-2026-0007"
+      s: `Invoice ${defaultInvoiceNumber()}`,
+      ro: `00${defaultInvoiceNumber()}`
     }
   };
 
@@ -475,23 +486,7 @@ $("pdfBtn").addEventListener("click", async () => {
   await render(obj);
 
   await new Promise((r) => setTimeout(r, 120));
-
-  const element = document.getElementById("sheet");
-  const invNo = (obj?.invoice?.number || "invoice").replaceAll(/[^\w\-]+/g, "_");
-
-  const opt = {
-    margin: [0, 0, 0, 0],
-    filename: `${invNo}.pdf`,
-    image: { type: "jpeg", quality: 0.98 },
-    html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
-    jsPDF: { unit: "mm", format: "a4", orientation: "portrait" }
-  };
-
-  try {
-    await html2pdf().set(opt).from(element).save();
-  } catch (e) {
-    $("err").textContent = "PDF export failed. If you're opening this in a restricted environment (some Electron wrappers do this), try a normal Chrome/Edge window.\n\nError: " + String(e?.message || e);
-  }
+  window.print();
 });
 
 loadSample();

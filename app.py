@@ -34,7 +34,7 @@ def _read_payload() -> str:
 def _build_qr_image(data: str, fmt: str) -> BytesIO:
     qr = qrcode.QRCode(
         error_correction=qrcode.constants.ERROR_CORRECT_M,
-        box_size=4,
+        box_size=6,
         border=1,
     )
     qr.add_data(data)
