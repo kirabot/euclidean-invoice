@@ -1,0 +1,118 @@
+<div class="top">
+  <div class="brand">
+    <div class="logo" data-logo>
+      <img data-logo-img alt="Euclidean Logo" />
+    </div>
+    <div>
+      <h1 class="title">Invoice</h1>
+      <div class="muted" style="font-size:13px;" data-field="seller.company_name"></div>
+    </div>
+  </div>
+  <div class="meta">
+    <div><span class="k">Invoice #</span> <span class="v" data-field="invoice.number"></span></div>
+    <div><span class="k">Issue Date</span> <span class="v" data-field="invoice.issue_date"></span></div>
+    <div><span class="k">Due Date</span> <span class="v" data-field="invoice.due_date"></span></div>
+  </div>
+</div>
+
+<div class="grid2">
+  <div class="box">
+    <h3>Seller</h3>
+    <div class="line"><b data-field="seller.company_name"></b></div>
+    <div data-list="seller.address_lines">
+      <template data-item="seller.address_lines">
+        <div class="line" data-field="value"></div>
+      </template>
+    </div>
+    <div class="line" data-optional="seller.tax_id"><span class="muted">Tax ID:</span> <span data-field="seller.tax_id"></span></div>
+    <div class="line" data-optional="seller.registration_id"><span class="muted">Registration ID:</span> <span data-field="seller.registration_id"></span></div>
+    <div class="line" data-optional="seller.phone"><span class="muted">Phone:</span> <span data-field="seller.phone"></span></div>
+    <div class="line" data-optional="seller.email"><span class="muted">Email:</span> <span data-field="seller.email"></span></div>
+    <div class="line" data-optional="seller.website"><span class="muted">Website:</span> <span data-field="seller.website"></span></div>
+  </div>
+
+  <div class="box">
+    <h3>Buyer</h3>
+    <div class="line"><b data-field="buyer.company_name"></b></div>
+    <div data-list="buyer.address_lines">
+      <template data-item="buyer.address_lines">
+        <div class="line" data-field="value"></div>
+      </template>
+    </div>
+    <div class="line" data-optional="buyer.tax_id"><span class="muted">Tax ID:</span> <span data-field="buyer.tax_id"></span></div>
+    <div class="line" data-optional="buyer.contact_name"><span class="muted">Attention:</span> <span data-field="buyer.contact_name"></span></div>
+    <div class="line" data-optional="buyer.email"><span class="muted">Email:</span> <span data-field="buyer.email"></span></div>
+  </div>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th style="width:28px;">#</th>
+      <th>Description</th>
+      <th class="num">Qty</th>
+      <th class="num">Unit Price</th>
+      <th class="num">Amount</th>
+    </tr>
+  </thead>
+  <tbody data-list="line_items">
+    <template data-item="line_items">
+      <tr>
+        <td data-field="index"></td>
+        <td class="desc" data-field="description"></td>
+        <td class="num"><span data-field="qty"></span> <span data-field="unit"></span></td>
+        <td class="num" data-field="unit_price"></td>
+        <td class="num" data-field="amount"></td>
+      </tr>
+    </template>
+  </tbody>
+</table>
+
+  <div class="totals">
+  <div class="totalsBox">
+    <div class="totalsRow"><span class="muted">Subtotal</span><span data-field="computed.totals.sub"></span></div>
+    <div class="totalsRow" data-optional="computed.totals.discount_display"><span class="muted">Discount</span><span data-field="computed.totals.discount_display"></span></div>
+    <div class="totalsRow" data-optional="computed.totals.shipping"><span class="muted">Shipping</span><span data-field="computed.totals.shipping"></span></div>
+    <div class="totalsRow" data-optional="computed.totals.tax_display"><span class="muted">Tax</span><span data-field="computed.totals.tax_display"></span></div>
+    <div class="totalsRow big"><span>Total</span><span data-field="computed.totals.grand"></span></div>
+  </div>
+</div>
+
+<div class="footer">
+  <div class="box">
+    <h3>Payment</h3>
+    <div class="payGrid">
+      <div>
+        <div class="small" data-optional="seller.bank.beneficiary"><span class="muted">Beneficiary:</span> <span data-field="seller.bank.beneficiary"></span></div>
+        <div class="small" data-optional="seller.bank.bank_name"><span class="muted">Bank:</span> <span data-field="seller.bank.bank_name"></span></div>
+        <div class="small" data-optional="seller.bank.iban"><span class="muted">IBAN:</span> <span data-field="seller.bank.iban"></span></div>
+        <div class="small" data-optional="seller.bank.swift"><span class="muted">SWIFT/BIC:</span> <span data-field="seller.bank.swift"></span></div>
+        <div class="small" data-optional="computed.account_no"><span class="muted">Account:</span> <span data-field="computed.account_no"></span></div>
+        <div class="small" data-optional="seller.bank.bank_address"><span class="muted">Bank Address:</span> <span data-field="seller.bank.bank_address"></span></div>
+        <div class="small"><span class="muted">Currency:</span> <span data-field="invoice.currency"></span></div>
+        <div data-show="ips" style="margin-top:8px;"><span class="pill">NBS IPS QR (RSD)</span></div>
+        <div data-show="ips" class="small" style="margin-top:6px;"><span class="muted">IPS String:</span> <span style="word-break:break-all;" data-field="computed.ips_string"></span></div>
+        <div data-hide="ips" class="small muted" style="margin-top:8px;">IPS QR is generated only for RSD invoices.</div>
+      </div>
+
+      <div>
+        <div data-show="ips">
+          <div class="qrBox">
+            <canvas id="ipsQr" width="92" height="92"></canvas>
+          </div>
+          <div class="qrCaption">Scan To Pay</div>
+        </div>
+        <div data-hide="ips">
+          <div class="qrBox" style="color:var(--muted);font-size:11px;text-align:center;padding:8px;box-sizing:border-box;">
+            No QR<br />For <span data-field="invoice.currency"></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="box">
+    <h3>Notes</h3>
+    <div class="small" data-field="invoice.notes"></div>
+  </div>
+</div>
