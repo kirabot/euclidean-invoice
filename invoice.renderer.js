@@ -219,6 +219,19 @@ function pickAccountNo(doc) {
   return bank.account_no_eur || bank.account_no_rsd || "";
 }
 
+function stripOrgIdPrefix(value, prefix) {
+  return String(value || "").replace(new RegExp(`^\\s*${prefix}\\s+`, "i"), "").trim();
+}
+
+function orgIdDisplay(value, rsdLabel, eurLabel, ccy) {
+  const raw = String(value || "").trim();
+  const isRsd = ccy === "RSD";
+  return {
+    label: isRsd ? rsdLabel : eurLabel,
+    value: isRsd ? stripOrgIdPrefix(raw, rsdLabel) : stripOrgIdPrefix(stripOrgIdPrefix(raw, rsdLabel), "MB")
+  };
+}
+
 function normalizeR18(account) {
   const digits = String(account || "").replaceAll("-", "").replaceAll(" ", "");
   return digits;
@@ -292,13 +305,16 @@ function applyOptionalFields(root, ctx) {
 function applyVisibility(root, showIps) {
   root.querySelectorAll("[data-show]").forEach((el) => {
     if (el.dataset.show === "ips") {
-      el.style.display = showIps ? "" : "none";
+      if (!showIps) el.remove();
     }
   });
   root.querySelectorAll("[data-hide]").forEach((el) => {
     if (el.dataset.hide === "ips") {
-      el.style.display = showIps ? "none" : "";
+      if (showIps) el.remove();
     }
+  });
+  root.querySelectorAll("[data-class-if-no-ips]").forEach((el) => {
+    if (!showIps) el.classList.add(el.dataset.classIfNoIps);
   });
 }
 
@@ -369,6 +385,9 @@ async function render(docRaw) {
   const accountNo = pickAccountNo(doc);
   const showIps = ccy === "RSD";
   const ipsString = showIps ? buildIpsString(doc, totals) : "";
+  const sellerTax = orgIdDisplay(doc.seller?.tax_id, "PIB", "Tax ID", ccy);
+  const sellerRegistration = orgIdDisplay(doc.seller?.registration_id, "MB", "Registration ID", ccy);
+  const buyerTax = orgIdDisplay(doc.buyer?.tax_id, "PIB", "Tax ID", ccy);
 
   const ctx = {
     ...doc,
@@ -379,6 +398,12 @@ async function render(docRaw) {
     computed: {
       account_no: accountNo,
       ips_string: ipsString,
+      seller_tax_label: sellerTax.label,
+      seller_tax_id: sellerTax.value,
+      seller_registration_label: sellerRegistration.label,
+      seller_registration_id: sellerRegistration.value,
+      buyer_tax_label: buyerTax.label,
+      buyer_tax_id: buyerTax.value,
       totals: {
         sub: money(totals.sub, ccy),
         discount_display: totals.discount ? `-${money(totals.discount, ccy)}` : "",
@@ -464,8 +489,29 @@ function safeParseJson() {
     }
     return parsed;
   } catch (e) {
-    $("err").textContent = String(e?.message || e);
+    $("err").textContent = "Invalid JSON: " + String(e?.message || e);
     return null;
+  }
+}
+
+async function importJsonFile(file) {
+  $("err").textContent = "";
+  if (!file) return;
+
+  try {
+    const text = await file.text();
+    const parsed = JSON.parse(text);
+    const valid = validateSchema(parsed);
+    if (!valid) {
+      $("err").textContent = `Could not import ${file.name}: schema validation failed:\n${formatAjvErrors(validateSchema.errors)}`;
+      return;
+    }
+    $("json").value = JSON.stringify(parsed, null, 2);
+    await render(parsed);
+  } catch (e) {
+    $("err").textContent = `Could not import ${file.name}: ${String(e?.message || e)}`;
+  } finally {
+    $("importFile").value = "";
   }
 }
 
@@ -476,6 +522,12 @@ $("renderBtn").addEventListener("click", async () => {
 });
 
 $("sampleBtn").addEventListener("click", loadSample);
+
+$("importBtn")?.addEventListener("click", () => $("importFile").click());
+
+$("importFile")?.addEventListener("change", async (event) => {
+  await importJsonFile(event.target.files?.[0]);
+});
 
 $("pdfBtn").addEventListener("click", async () => {
   const obj = safeParseJson();

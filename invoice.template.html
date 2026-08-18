@@ -24,8 +24,8 @@
         <div class="line" data-field="value"></div>
       </template>
     </div>
-    <div class="line" data-optional="seller.tax_id"><span class="muted">Tax ID:</span> <span data-field="seller.tax_id"></span></div>
-    <div class="line" data-optional="seller.registration_id"><span class="muted">Registration ID:</span> <span data-field="seller.registration_id"></span></div>
+    <div class="line" data-optional="computed.seller_tax_id"><span class="muted" data-field="computed.seller_tax_label"></span><span class="muted">:</span> <span data-field="computed.seller_tax_id"></span></div>
+    <div class="line" data-optional="computed.seller_registration_id"><span class="muted" data-field="computed.seller_registration_label"></span><span class="muted">:</span> <span data-field="computed.seller_registration_id"></span></div>
     <div class="line" data-optional="seller.phone"><span class="muted">Phone:</span> <span data-field="seller.phone"></span></div>
     <div class="line" data-optional="seller.email"><span class="muted">Email:</span> <span data-field="seller.email"></span></div>
     <div class="line" data-optional="seller.website"><span class="muted">Website:</span> <span data-field="seller.website"></span></div>
@@ -39,7 +39,7 @@
         <div class="line" data-field="value"></div>
       </template>
     </div>
-    <div class="line" data-optional="buyer.tax_id"><span class="muted">Tax ID:</span> <span data-field="buyer.tax_id"></span></div>
+    <div class="line" data-optional="computed.buyer_tax_id"><span class="muted" data-field="computed.buyer_tax_label"></span><span class="muted">:</span> <span data-field="computed.buyer_tax_id"></span></div>
     <div class="line" data-optional="buyer.contact_name"><span class="muted">Attention:</span> <span data-field="buyer.contact_name"></span></div>
     <div class="line" data-optional="buyer.email"><span class="muted">Email:</span> <span data-field="buyer.email"></span></div>
   </div>
@@ -79,7 +79,7 @@
 </div>
 
 <div class="footer">
-  <div class="footerRow">
+  <div class="footerRow" data-class-if-no-ips="noQr">
     <div class="footerLeft">
       <div class="box">
         <h3>Payment</h3>
@@ -91,7 +91,6 @@
           <div class="small" data-optional="computed.account_no"><span class="muted">Account:</span> <span data-field="computed.account_no"></span></div>
           <div class="small" data-optional="seller.bank.bank_address"><span class="muted">Bank Address:</span> <span data-field="seller.bank.bank_address"></span></div>
           <div class="small"><span class="muted">Currency:</span> <span data-field="invoice.currency"></span></div>
-          <div data-hide="ips" class="small muted" style="margin-top:8px;">IPS QR is generated only for RSD invoices.</div>
         </div>
       </div>
 
@@ -101,21 +100,14 @@
       </div>
     </div>
 
-    <div class="box" aria-label="Payment QR">
+    <div class="box" aria-label="Payment QR" data-show="ips">
       <h3>For your convenience</h3>
-      <div data-show="ips">
-        <div class="qrBox">
-          <canvas id="ipsQr" width="140" height="140"></canvas>
-        </div>
-        <div class="qrCaption">Scan To Pay</div>
-        <div class="ipsString"><span class="pill">NBS IPS QR (RSD)</span></div>
-        <div class="ipsString" data-field="computed.ips_string"></div>
+      <div class="qrBox">
+        <canvas id="ipsQr" width="140" height="140"></canvas>
       </div>
-      <div data-hide="ips">
-        <div class="qrBox" style="color:var(--muted);font-size:11px;text-align:center;padding:12px;box-sizing:border-box;">
-          No QR<br />For <span data-field="invoice.currency"></span>
-        </div>
-      </div>
+      <div class="qrCaption">Scan To Pay</div>
+      <div class="ipsString"><span class="pill">NBS IPS QR (RSD)</span></div>
+      <div class="ipsString" data-field="computed.ips_string"></div>
     </div>
   </div>
 </div>
