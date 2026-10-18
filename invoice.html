@@ -354,6 +354,7 @@
     </div>
   </div>
 
+<script src="qrcode.js"></script>
 <script>
   const $ = (id) => document.getElementById(id);
 
@@ -406,7 +407,9 @@
     return String(s ?? "")
       .replaceAll("&", "&amp;")
       .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;");
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#39;");
   }
 
   function money(n, ccy) {
@@ -538,24 +541,11 @@
   }
 
   async function fetchIpsQrDataUrl(ipsString) {
-    const response = await fetch("/api/ips-qr", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ data: ipsString })
-    });
-
-    if (!response.ok) {
-      const message = await response.text();
-      throw new Error(message || "QR endpoint error.");
-    }
-
-    const blob = await response.blob();
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = () => reject(new Error("Failed to read QR image."));
-      reader.readAsDataURL(blob);
-    });
+    qrcode.stringToBytes = qrcode.stringToBytesFuncs['UTF-8'];
+    const qr = qrcode(0, 'M');
+    qr.addData(ipsString, 'Byte');
+    qr.make();
+    return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(qr.createSvgTag(4, 16));
   }
 
   async function render(docRaw) {
@@ -711,6 +701,7 @@
       try {
         const qrImg = document.getElementById("ipsQr");
         qrImg.src = await fetchIpsQrDataUrl(ipsString);
+        await qrImg.decode();
       } catch (e) {
         // If QR fails, show error inline (but don't break render)
         const err = document.createElement("div");
