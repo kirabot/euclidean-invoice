@@ -1,0 +1,18 @@
+const {test}=require('node:test');
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const vm=require('node:vm');
+const html=fs.readFileSync('index.html','utf8');
+const source=html.match(/<script>([\s\S]*?)<\/script>/)[1].split('  // Boot')[0];
+const elements={};
+const context={structuredClone,Intl,Date,console,document:{getElementById(id){return elements[id]??={value:'',textContent:'',addEventListener(){}}}}};
+vm.createContext(context);vm.runInContext(source,context);
+test('RSD account expands middle segment to 13 digits',()=>assert.equal(context.normalizeR18('325-123456-21'),'325000000012345621'));
+test('reject invalid numeric input',()=>assert.throws(()=>context.validateInvoice({invoice:{currency:'EUR'},line_items:[{qty:1,unit_price:'oops'}]}),/unit_price/));
+test('reject empty invoice',()=>assert.throws(()=>context.validateInvoice({}),/line_items/));
+test('round each line before summing',()=>assert.equal(context.computeTotals({line_items:[{qty:1,unit_price:.335},{qty:1,unit_price:.335}]}).grand,.68));
+test('tax and adjustments',()=>assert.equal(context.computeTotals({line_items:[{qty:2,unit_price:100,tax_rate:.2}],totals:{discount:10,shipping:5}}).grand,235));
+test('tax included does not add tax again',()=>assert.equal(context.computeTotals({line_items:[{qty:1,unit_price:120,tax_rate:.2}],totals:{tax_included:true}}).grand,120));
+test('reject impossible calendar dates',()=>assert.equal(context.parseInvoiceDate('2026-02-30'),null));
+test('due dates use calendar days over DST',()=>assert.equal(context.formatDueMessage({issue_date:'2026-10-24',due_date:'2026-10-26'}),'Payment due in 2 days.'));
+test('entry points stay identical',()=>assert.equal(html,fs.readFileSync('invoice.html','utf8')));

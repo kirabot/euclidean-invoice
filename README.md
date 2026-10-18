@@ -46,3 +46,11 @@ The legacy Flask server remains optional for previous integrations.
 ## Third-party code
 qrcode.js: QR Code Generator by Kazuhiko Arase, MIT license, vendored from
 https://github.com/kazuhikoarase/qrcode-generator (js/dist/qrcode.js).
+
+## Validation and tests
+Run `TZ=Europe/Belgrade node --test tests/invoice.test.cjs` (Node 18+).
+The editor rejects nonnumeric/negative amounts, empty items, invalid dates and tax rates outside 0–1.
+Line amounts and taxes round to the currency's minor units before totaling.
+`discount` is a fixed adjustment after line taxes; `shipping` adds no automatic tax.
+With `tax_included: true`, prices already include tax and no additional tax is added.
+Download PDF opens the browser print dialog; choose Save as PDF, A4 and disable browser headers/footers.

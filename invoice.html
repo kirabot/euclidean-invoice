@@ -21,9 +21,11 @@
       color: #111;
     }
 
+    * { box-sizing: border-box; }
+    .panel { min-width: 0; }
     .app {
       display: grid;
-      grid-template-columns: 420px 1fr;
+      grid-template-columns: 420px minmax(0, 1fr);
       gap: 16px;
       padding: 16px;
     }
@@ -300,7 +302,16 @@
       font-weight: 700;
     }
 
+    @media (max-width: 900px) {
+      .app { grid-template-columns: minmax(0, 1fr); padding: 8px; }
+      textarea { height: 300px; font-size: 16px; }
+    }
+    @page { size: A4; margin: 10mm; }
     @media print {
+      tr, .box, .totalsBox, .top { break-inside: avoid; }
+      thead { display: table-header-group; }
+      .sheetWrap { overflow: visible; }
+      .ipsString { display: none; }
       body { background: #fff; }
       .app { display: block; padding: 0; }
       .panel.editor { display: none; }
@@ -332,7 +343,7 @@
     <div class="panel editor">
       <h2>Invoice JSON</h2>
       <div class="content">
-        <textarea id="json"></textarea>
+        <textarea id="json" aria-label="Invoice JSON" spellcheck="false"></textarea>
         <div class="row">
           <button class="primary" id="renderBtn">Render</button>
           <button id="pdfBtn">Download PDF</button>
@@ -342,7 +353,7 @@
           Notes: Seller + logo are hardcoded. PDF uses the browser print dialog for selectable text. IPS QR is generated for RSD only.
         </div>
         <div class="warning" id="protocolWarning" hidden></div>
-        <div class="error" id="err"></div>
+        <div class="error" id="err" role="alert"></div>
       </div>
     </div>
 
@@ -418,11 +429,44 @@
   }
 
   function parseInvoiceDate(dateString) {
-    if (!dateString) return null;
-    const raw = String(dateString).trim();
-    if (!raw) return null;
-    const parsed = new Date(raw.includes("T") ? raw : `${raw}T00:00:00`);
-    return Number.isNaN(parsed.getTime()) ? null : parsed;
+    if (typeof dateString !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(dateString)) return null;
+    const parsed = new Date(dateString + "T00:00:00Z");
+    return Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== dateString ? null : parsed;
+  }
+
+  function validateInvoice(doc) {
+    if (!doc || typeof doc !== "object" || Array.isArray(doc)) throw new Error("Invoice JSON must be an object.");
+    if (!Array.isArray(doc.line_items) || !doc.line_items.length) throw new Error("line_items must contain at least one item.");
+    const numeric = (value, label) => {
+      if (typeof value !== "number" || !Number.isFinite(value) || value < 0) throw new Error(label + " must be a finite, non-negative number.");
+    };
+    doc.line_items.forEach((it, i) => {
+      if (!it || typeof it !== "object") throw new Error(`line_items[${i}] must be an object.`);
+      numeric(it.qty, `line_items[${i}].qty`);
+      numeric(it.unit_price, `line_items[${i}].unit_price`);
+      numeric(it.tax_rate ?? 0, `line_items[${i}].tax_rate`);
+      if (it.qty === 0) throw new Error(`line_items[${i}].qty must be greater than zero.`);
+      if ((it.tax_rate ?? 0) > 1) throw new Error("tax_rate must be a fraction, e.g. 0.20 for 20%.");
+    });
+    for (const name of ["discount", "shipping"]) numeric(doc.totals?.[name] ?? 0, `totals.${name}`);
+    if (doc.totals?.tax_included != null && typeof doc.totals.tax_included !== "boolean") throw new Error("tax_included must be true or false.");
+    for (const party of ["seller", "buyer"]) {
+      if (doc[party]?.address_lines != null && !Array.isArray(doc[party].address_lines)) throw new Error(party + ".address_lines must be an array.");
+    }
+    const ccy = doc.invoice?.currency ?? "EUR";
+    if (typeof ccy !== "string" || !/^[A-Z]{3}$/i.test(ccy)) throw new Error("currency must be a three-letter code, e.g. EUR or RSD.");
+    for (const name of ["issue_date", "due_date"]) {
+      if (doc.invoice?.[name] && !parseInvoiceDate(doc.invoice[name])) throw new Error(name + " must be a valid YYYY-MM-DD date.");
+    }
+    if (doc.invoice?.issue_date && doc.invoice?.due_date && doc.invoice.due_date < doc.invoice.issue_date) throw new Error("due_date cannot precede issue_date.");
+    const totals = computeTotals(doc);
+    if (![totals.sub, totals.tax, totals.grand].every(Number.isFinite) || totals.discount > totals.sub) throw new Error("Invalid totals: check amounts and discount.");
+  }
+
+  function roundMoney(n, ccy = "EUR") {
+    const digits = new Intl.NumberFormat("en", { style: "currency", currency: ccy }).resolvedOptions().maximumFractionDigits;
+    const scale = 10 ** digits;
+    return Math.round((n + Number.EPSILON) * scale) / scale;
   }
 
   function formatDueMessage(invoice) {
@@ -446,12 +490,12 @@
     return `${baseNotes}${separator}${dueMessage}`;
   }
 
-  function lineTotal(it) {
+  function lineTotal(it, ccy = "EUR") {
     const qty = Number(it.qty || 0);
     const unit = Number(it.unit_price || 0);
-    const base = qty * unit;
+    const base = roundMoney(qty * unit, ccy);
     const taxRate = Number(it.tax_rate || 0);
-    const tax = base * taxRate;
+    const tax = roundMoney(base * taxRate, ccy);
     return { base, tax, gross: base + tax };
   }
 
@@ -467,7 +511,7 @@
     const items = doc.line_items || [];
     let sub = 0, tax = 0;
     for (const it of items) {
-      const t = lineTotal(it);
+      const t = lineTotal(it, doc.invoice?.currency || "EUR");
       sub += t.base;
       tax += t.tax;
     }
@@ -475,7 +519,8 @@
     const shipping = Number(doc.totals?.shipping || 0);
     const afterDiscount = sub - discount;
     const grand = afterDiscount + shipping + (doc.totals?.tax_included ? 0 : tax);
-    return { sub, tax, discount, shipping, grand };
+    const ccy = doc.invoice?.currency || "EUR";
+    return Object.fromEntries(Object.entries({ sub, tax, discount, shipping, grand }).map(([k,v]) => [k, roundMoney(v, ccy)]));
   }
 
   function pickAccountNo(doc) {
@@ -486,8 +531,10 @@
   }
 
   function normalizeR18(account) {
-    // NBS recommends R tag as 18 digits, no dashes. :contentReference[oaicite:1]{index=1}
-    const digits = String(account || "").replaceAll("-", "").replaceAll(" ", "");
+    const raw = String(account || "").replaceAll(" ", "");
+    const parts = raw.match(/^(\d{3})-(\d{1,13})-(\d{2})$/);
+    const digits = parts ? parts[1] + parts[2].padStart(13, "0") + parts[3] : raw;
+    if (!/^\d{18}$/.test(digits)) throw new Error("RSD account must have 18 digits or format 325-123456-78.");
     return digits;
   }
 
@@ -549,6 +596,7 @@
   }
 
   async function render(docRaw) {
+    validateInvoice(docRaw);
     const doc = deepMerge(DEFAULTS, docRaw);
     if (!doc.invoice?.number) {
       doc.invoice = { ...doc.invoice, number: defaultInvoiceNumber() };
@@ -576,7 +624,7 @@
     const notesText = mergeNotesWithDue(doc.invoice?.notes || "", dueMessage);
 
     const items = (doc.line_items || []).map((it, idx) => {
-      const lt = lineTotal(it);
+      const lt = lineTotal(it, ccy);
       return `
         <tr>
           <td>${idx + 1}</td>
@@ -717,11 +765,14 @@
   }
 
   function loadSample() {
+    const today = new Date();
+    const due = new Date(today); due.setDate(due.getDate() + 14);
+    const localDate = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
     const sample = {
       invoice: {
         number: defaultInvoiceNumber(),
-        issue_date: "2026-02-04",
-        due_date: "2026-02-18",
+        issue_date: localDate(today),
+        due_date: localDate(due),
         currency: "RSD",
         notes: "Thank you for your business."
       },
@@ -733,7 +784,7 @@
         email: "ap@client.com"
       },
       line_items: [
-        { description: "Game Development Services (Feb 2026)", qty: 1, unit: "Lot", unit_price: 300000, tax_rate: 0 }
+        { description: "Game Development Services", qty: 1, unit: "Lot", unit_price: 300000, tax_rate: 0 }
       ],
       totals: { discount: 0, shipping: 0, tax_included: false },
 
@@ -745,7 +796,7 @@
     };
 
     $("json").value = JSON.stringify(sample, null, 2);
-    render(sample);
+    render(sample).catch(e => { $("err").textContent = e.message; });
   }
 
   function safeParseJson() {
@@ -769,23 +820,27 @@
     }
   }
 
-  $("renderBtn").addEventListener("click", async () => {
-    const obj = safeParseJson();
-    if (!obj) return;
-    await render(obj);
-  });
-
-  $("sampleBtn").addEventListener("click", loadSample);
-
-  $("pdfBtn").addEventListener("click", async () => {
-    const obj = safeParseJson();
-    if (!obj) return;
-
-    await render(obj);
-
-    await new Promise(r => setTimeout(r, 120));
-    window.print();
-  });
+  async function renderFromEditor(print = false) {
+    $("err").textContent = "";
+    $("renderBtn").disabled = $("pdfBtn").disabled = true;
+    try {
+      const obj = JSON.parse($("json").value);
+      await render(obj);
+      if (print) {
+        await Promise.all([...$("sheet").querySelectorAll("img")].map(img => img.decode().catch(() => {})));
+        document.title = "Invoice " + (obj.invoice?.number || defaultInvoiceNumber());
+        window.print();
+      }
+    } catch (e) {
+      $("err").textContent = "Cannot render invoice: " + (e.message || e);
+      $("sheet").innerHTML = "";
+    } finally {
+      $("renderBtn").disabled = $("pdfBtn").disabled = false;
+    }
+  }
+  $("renderBtn").addEventListener("click", () => renderFromEditor());
+  $("sampleBtn").addEventListener("click", () => { $("err").textContent = ""; loadSample(); });
+  $("pdfBtn").addEventListener("click", () => renderFromEditor(true));
 
   // Boot
   updateProtocolWarning();
